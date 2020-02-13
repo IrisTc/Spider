@@ -2,6 +2,8 @@ from urllib import request
 import urllib.parse
 import string
 from bs4 import BeautifulSoup
+from mylog import MyLog as mylog
+
 class Item(object):
     title = None
     firstAuthor = None
@@ -15,6 +17,7 @@ class GetInfo(object):
     def __init__(self, url):
         self.url = url
         self.pageSum = 10
+        self.log = mylog()
         self.urls = self.getUrls(self.pageSum)
         self.items = self.spider(self.urls)
         self.pipelines(self.items)
@@ -27,12 +30,18 @@ class GetInfo(object):
             ul[-1] = pn
             url = '='.join(ul)
             urls.append(url)
+        self.log.info(u'获取URLS成功')
         return urls
 
     def getResponseContent(self, url):
-        new_url = urllib.parse.quote(url, safe=string.printable)
-        response = request.urlopen(new_url)
-        return response.read()
+        try:
+            new_url = urllib.parse.quote(url, safe=string.printable)
+            response = request.urlopen(new_url)
+        except:
+            self.log.error(u'返回URL：%s 数据失败' % url)
+        else:
+            self.log.info(u'返回URL：%s 数据成功' % url)
+            return response.read()
 
     def spider(self, urls):
         items = []
@@ -53,6 +62,7 @@ class GetInfo(object):
                 item.lastAuthor = tag.find('span', attrs={'class': 'tb_icon_author_rely'}).a.get_text().strip()
                 item.lastTime = tag.find('span', attrs={'title': u'最后回复时间'.encode('utf8')}).get_text().strip()
                 items.append(item)
+                self.log.info(u'获取标题为《%s》的项成果' % item.title)
             return items
 
     def pipelines(self, items):
@@ -63,6 +73,7 @@ class GetInfo(object):
                     'title:%s \t firstAuthor:%s \t firstTime:%s \t content:%s \t number:%s \t lastAuthor:%s \t lastTime:%s \n'
                     %(item.title, item.firstAuthor, item.firstTime, item.content, item.reNum, item.lastAuthor,
                        item.lastTime))
+                self.log.info(u'标题为《%s》的项输入到“%s”成功' % (item.title, fileName))
 
 if __name__ == '__main__':
     url = 'https://tieba.baidu.com/f?kw=某科学的超电磁炮&ie=utf-8&pn=0'
